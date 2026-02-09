@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmniTool v4.0 - Secure Access</title>
+    <style>
+        :root {
+            --bg-body: #0b0e14;
+            --bg-card: #151b26;
+            --primary: #3b82f6;
+            --danger: #ef4444;
+            --text-main: #e2e8f0;
+            --text-dim: #64748b;
+            --border: #2d3748;
+        }
+
+        * { box-sizing: border-box; outline: none; font-family: 'Segoe UI', system-ui, sans-serif; transition: all 0.3s ease; }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            overflow: hidden; /* Evita scroll durante login */
+        }
+
+        /* --- SISTEMA DE LOGIN --- */
+        #login-gate {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(11, 14, 20, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .login-box {
+            width: 320px;
+            text-align: center;
+        }
+
+        .login-title {
+            font-size: 1.5rem;
+            font-weight: 300;
+            margin-bottom: 2rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        .login-title span { font-weight: 800; color: var(--primary); }
+
+        .pass-input {
+            width: 100%;
+            padding: 1rem;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: white;
+            font-size: 1.2rem;
+            text-align: center;
+            letter-spacing: 5px;
+            margin-bottom: 1rem;
+        }
+        
+        .pass-input:focus { border-color: var(--primary); box-shadow: 0 0 15px rgba(59, 130, 246, 0.3); }
+
+        .btn-access {
+            width: 100%;
+            padding: 1rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .btn-access:hover { background: #2563eb; transform: translateY(-2px); }
+
+        .error-msg {
+            color: var(--danger);
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        /* Animação de Erro (Shake) */
+        .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; border-color: var(--danger) !important; }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+
+        /* --- APLICAÇÃO PRINCIPAL (Fica borrada até o login) --- */
+        #app-wrapper {
+            filter: blur(8px);
+            pointer-events: none;
+            opacity: 0.5;
+            transform: scale(0.95);
+        }
+
+        .app-unlocked {
+            filter: blur(0) !important;
+            pointer-events: all !important;
+            opacity: 1 !important;
+            transform: scale(1) !important;
+        }
+
+        /* Estilos do App Original */
+        .main-interface {
+            width: 100%;
+            max-width: 480px;
+            background: var(--bg-card);
+            border-radius: 20px;
+            box-shadow: 0 0 40px rgba(0,0,0,0.5);
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        /* Restante do CSS do app (Tabs, Inputs, etc) */
+        .tabs { display: grid; grid-template-columns: 1fr 1fr; background: #0f131a; }
+        .tab-btn { background: transparent; border: none; color: var(--text-dim); padding: 1.5rem; font-size: 1rem; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; }
+        .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); background: rgba(59, 130, 246, 0.05); }
+        .content-area { padding: 2rem; }
+        .control-group { margin-bottom: 1.5rem; }
+        label { display: block; color: var(--text-dim); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; }
+        select, .app-input { width: 100%; background: #0b0e14; color: white; border: 1px solid var(--border); padding: 1rem; border-radius: 10px; font-size: 1rem; }
+        .result-box { background: radial-gradient(circle at top right, #1e293b, #0f172a); border-radius: 12px; padding: 1.5rem; text-align: center; border: 1px solid var(--border); margin-top: 2rem; }
+        .result-value { font-size: 2.2rem; font-weight: 700; background: linear-gradient(90deg, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: block; margin-bottom: 0.5rem; }
+        .result-sub { color: var(--primary); font-size: 0.9rem; font-weight: 500; }
+        .hidden { display: none !important; }
+        .row { display: flex; gap: 10px; }
+        .btn-calc { width: 100%; background: var(--primary); color: white; border: none; padding: 1rem; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+
+    </style>
+</head>
+<body>
+
+<div id="login-gate">
+    <div class="login-box">
+        <h1 class="login-title">Omni<span>Tool</span> Security</h1>
+        <input type="password" id="passwordInput" class="pass-input" placeholder="•••••" maxlength="10">
+        <button class="btn-access" onclick="attemptLogin()">Desbloquear</button>
+        <div id="loginMsg" class="error-msg">ACESSO NEGADO</div>
+    </div>
+</div>
+
+<div id="app-wrapper">
+    <div class="main-interface">
+        <div class="tabs">
+            <button class="tab-btn active" onclick="setMode('conv')">Conversor Universal</button>
+            <button class="tab-btn" onclick="setMode('math')">Matemática & Trig</button>
+        </div>
+
+        <div class="content-area">
+            <div id="view-conv">
+                <div class="control-group">
+                    <label>Categoria</label>
+                    <select id="convType" onchange="renderConvUnits()"></select>
+                </div>
+                <div class="row control-group">
+                    <div style="flex:1"><label>De</label><select id="unitFrom" onchange="calcConv()"></select></div>
+                    <div style="flex:1"><label>Para</label><select id="unitTo" onchange="calcConv()"></select></div>
+                </div>
+                <div class="control-group">
+                    <label>Valor</label>
+                    <input type="number" id="convVal" class="app-input" placeholder="0.00" oninput="calcConv()">
+                </div>
+            </div>
+
+            <div id="view-math" class="hidden">
+                <div class="control-group">
+                    <label>Operação</label>
+                    <select id="mathOp" onchange="renderMathInputs()">
+                        <optgroup label="Trigonometria (Básica)">
+                            <option value="sin">Seno</option><option value="cos">Cosseno</option><option value="tan">Tangente</option>
+                        </optgroup>
+                        <optgroup label="Trigonometria (Inversa)">
+                            <option value="asin">Achar Ângulo (Asin)</option><option value="acos">Achar Ângulo (Acos)</option>
+                        </optgroup>
+                        <optgroup label="Geometria">
+                            <option value="pit_hyp">Hipotenusa</option><option value="pit_cat">Cateto</option><option value="area_circ">Área Círculo</option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div id="mathInputsContainer"></div>
+                <button class="btn-calc" onclick="calcMath()">Calcular</button>
+            </div>
+
+            <div class="result-box">
+                <span class="result-value" id="resMain">---</span>
+                <span class="result-sub" id="resSub">Aguardando...</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    /* ================= LOGICA DE LOGIN ================= */
+    const PASS_HASH = "4SWN1"; // Senha definida
+    const inputPass = document.getElementById('passwordInput');
+
+    // Permitir Enter para logar
+    inputPass.addEventListener("keypress", function(event) {
+        if (event.key === "Enter") attemptLogin();
+    });
+
+    function attemptLogin() {
+        const val = inputPass.value;
+        const gate = document.getElementById('login-gate');
+        const app = document.getElementById('app-wrapper');
+        const msg = document.getElementById('loginMsg');
+
+        if(val === PASS_HASH) {
+            // Sucesso
+            gate.style.opacity = '0';
+            gate.style.pointerEvents = 'none'; // Permite clicar no app atrás
+            app.classList.add('app-unlocked');
+            setTimeout(() => gate.style.display = 'none', 500); // Remove do DOM
+        } else {
+            // Erro
+            inputPass.classList.add('shake');
+            msg.style.opacity = '1';
+            msg.style.transform = 'translateY(0)';
+            
+            // Remove a classe shake após animação para poder tremer de novo
+            setTimeout(() => inputPass.classList.remove('shake'), 500);
+            inputPass.value = '';
+            inputPass.focus();
+        }
+    }
+
+    /* ================= LOGICA DO APP (OMNITOOL) ================= */
+    const DATA = {
+        units: {
+            comprimento: { name: "Comprimento", list: { mm: 0.001, cm: 0.01, m: 1, km: 1000, in: 0.0254, ft: 0.3048 } },
+            area: { name: "Área", list: { cm2: 0.0001, m2: 1, ha: 10000, alq: 24200 } },
+            volume: { name: "Volume", list: { ml: 0.001, l: 1, m3: 1000, gal: 3.785 } },
+            pressao: { name: "Pressão", list: { bar: 1, mpa: 10, psi: 0.0689 } }
+        },
+        math: {
+            sin: { labels: ["Ângulo (Graus)"], fn: (v) => Math.sin(v[0] * Math.PI/180).toFixed(4) },
+            cos: { labels: ["Ângulo (Graus)"], fn: (v) => Math.cos(v[0] * Math.PI/180).toFixed(4) },
+            tan: { labels: ["Ângulo (Graus)"], fn: (v) => Math.tan(v[0] * Math.PI/180).toFixed(4) },
+            asin: { labels: ["Seno (-1 a 1)"], fn: (v) => (Math.asin(v[0]) * 180/Math.PI).toFixed(2)+"°" },
+            acos: { labels: ["Cosseno (-1 a 1)"], fn: (v) => (Math.acos(v[0]) * 180/Math.PI).toFixed(2)+"°" },
+            pit_hyp: { labels: ["Cateto A", "Cateto B"], fn: (v) => Math.sqrt(v[0]**2 + v[1]**2).toFixed(4) },
+            pit_cat: { labels: ["Hipotenusa", "Cateto"], fn: (v) => Math.sqrt(v[0]**2 - v[1]**2).toFixed(4) },
+            area_circ: { labels: ["Raio"], fn: (v) => (Math.PI * v[0]**2).toFixed(4) }
+        }
+    };
+
+    const getEl = (id) => document.getElementById(id);
+
+    // Inicialização App
+    (function init() {
+        const sel = getEl('convType');
+        for(let key in DATA.units) sel.add(new Option(DATA.units[key].name, key));
+        renderConvUnits();
+        renderMathInputs();
+        inputPass.focus(); // Foca no login ao abrir
+    })();
+
+    function setMode(mode) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+        getEl('view-conv').classList.add('hidden');
+        getEl('view-math').classList.add('hidden');
+        getEl(`view-${mode}`).classList.remove('hidden');
+    }
+
+    /* Converters Logic */
+    function renderConvUnits() {
+        const type = getEl('convType').value;
+        const list = DATA.units[type].list;
+        const uFrom = getEl('unitFrom');
+        const uTo = getEl('unitTo');
+        uFrom.innerHTML = ''; uTo.innerHTML = '';
+        Object.keys(list).forEach(k => { uFrom.add(new Option(k, k)); uTo.add(new Option(k, k)); });
+        if(uTo.options.length > 1) uTo.selectedIndex = 1;
+        calcConv();
+    }
+
+    function calcConv() {
+        const val = parseFloat(getEl('convVal').value);
+        if(isNaN(val)) return display("---", "...");
+        const type = getEl('convType').value;
+        const factors = DATA.units[type].list;
+        const res = (val * factors[getEl('unitFrom').value]) / factors[getEl('unitTo').value];
+        display(res < 1e-4 || res > 1e6 ? res.toExponential(4) : parseFloat(res.toFixed(5)), getEl('unitTo').value);
+    }
+
+    /* Math Logic */
+    function renderMathInputs() {
+        const op = getEl('mathOp').value;
+        const container = getEl('mathInputsContainer');
+        container.innerHTML = '';
+        DATA.math[op].labels.forEach((lbl, i) => {
+            const div = document.createElement('div');
+            div.className = 'control-group';
+            div.innerHTML = `<label>${lbl}</label><input type="number" class="app-input math-input">`;
+            container.appendChild(div);
+        });
+        display("---", "...");
+    }
+
+    function calcMath() {
+        const op = getEl('mathOp').value;
+        const vals = Array.from(document.querySelectorAll('.math-input')).map(i => parseFloat(i.value));
+        if(vals.some(isNaN)) return display("Erro", "Preencha tudo");
+        try { display(DATA.math[op].fn(vals), "Resultado"); } catch { display("Erro", "Inválido"); }
+    }
+
+    function display(m, s) { getEl('resMain').innerText = m; getEl('resSub').innerText = s; }
+
+</script>
+
+</body>
+</html>
